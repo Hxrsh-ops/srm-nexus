@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'dart:math' as math;
 import 'attendance_screen.dart';
 import 'coming_soon_screen.dart';
+import '../widgets/glass_card.dart';
 
 class DashboardScreen extends StatefulWidget {
   final bool showDrawerButton;
@@ -160,7 +161,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0A0F),
+      backgroundColor: Colors.transparent,
       body: AnimatedBuilder(
         animation: _bgController,
         builder: (context, child) => Stack(
@@ -428,22 +429,9 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   Widget _buildGPACard() {
     final overallPercent = _getOverallPercent();
-    return Container(
+    return GlassCard(
       padding: const EdgeInsets.all(22),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            const Color(0xFF6C63FF).withValues(alpha: 0.15),
-            const Color(0xFF00D4FF).withValues(alpha: 0.08),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(
-          color: const Color(0xFF6C63FF).withValues(alpha: 0.25),
-        ),
-      ),
+      borderGlow: true,
       child: Row(
         children: [
           Expanded(
@@ -642,13 +630,10 @@ class _DashboardScreenState extends State<DashboardScreen>
               );
             }
           },
-          child: Container(
+          child: GlassCard(
+            borderRadius: 18,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.07),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: color.withValues(alpha: 0.18)),
-            ),
+            baseColor: color,
             child: Row(
               children: [
                 Container(
@@ -702,13 +687,10 @@ class _DashboardScreenState extends State<DashboardScreen>
     final attendanceColor = _getAttendanceColor(percent);
     final status = _getAttendanceStatus(percent);
 
-    return Container(
+    return GlassCard(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
-      ),
+      borderRadius: 18,
+      baseColor: color,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

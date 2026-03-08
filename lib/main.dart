@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_displaymode/flutter_displaymode.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'dart:math' as math;
 import 'screens/main_scaffold.dart';
 
@@ -22,10 +23,14 @@ class SRMNexusApp extends StatelessWidget {
       title: 'SRM Nexus',
       debugShowCheckedModeBanner: false,
       theme: ThemeData.dark().copyWith(
-        scaffoldBackgroundColor: const Color(0xFF0A0A0F),
+        scaffoldBackgroundColor: const Color(0xFF12141D), // Soft dark mode obsidian
         colorScheme: const ColorScheme.dark(
           primary: Color(0xFF6C63FF),
           secondary: Color(0xFF00D4FF),
+          surface: Color(0xFF1E2130), // Slightly lighter for glassmorphism base
+        ),
+        textTheme: GoogleFonts.spaceGroteskTextTheme(
+          ThemeData.dark().textTheme,
         ),
       ),
       home: const MainScaffold(),

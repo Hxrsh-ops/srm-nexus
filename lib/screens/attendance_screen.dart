@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
+import '../widgets/glass_card.dart';
 
 class AttendanceScreen extends StatefulWidget {
   final bool showBackButton;
@@ -206,7 +207,7 @@ class _AttendanceScreenState extends State<AttendanceScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0A0F),
+      backgroundColor: const Color(0xFF12141D),
       body: AnimatedBuilder(
         animation: _bgController,
         builder: (context, child) => Stack(
@@ -403,22 +404,11 @@ class _AttendanceScreenState extends State<AttendanceScreen>
 
   // ── Overall Summary Card ──────────────────────────────────────────────────
   Widget _buildOverallCard() {
-    return Container(
+    return GlassCard(
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            _getColor(overallPercent).withValues(alpha: 0.15),
-            _getColor(overallPercent).withValues(alpha: 0.05),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: _getColor(overallPercent).withValues(alpha: 0.3),
-        ),
-      ),
+      borderRadius: 20,
+      borderGlow: true,
+      baseColor: _getColor(overallPercent),
       child: Row(
         children: [
           // Big ring
@@ -542,15 +532,13 @@ class _AttendanceScreenState extends State<AttendanceScreen>
     final statusColor = _getColor(percent);
     final status = _getStatus(percent);
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
-      ),
-      child: Column(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: GlassCard(
+        padding: const EdgeInsets.all(18),
+        borderRadius: 18,
+        baseColor: Colors.white,
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Top row
@@ -677,7 +665,7 @@ class _AttendanceScreenState extends State<AttendanceScreen>
           ),
         ],
       ),
-    );
+    ));
   }
 
   Widget _hoursChip(String label, String value, Color color) {
@@ -719,14 +707,12 @@ class _AttendanceScreenState extends State<AttendanceScreen>
   }
 
   Widget _buildMonthHistoryCard(Map<String, dynamic> m) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 24),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.03),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
-      ),
-      child: Column(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 24),
+      child: GlassCard(
+        borderRadius: 16,
+        baseColor: Colors.white,
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // Month Header
@@ -827,7 +813,7 @@ class _AttendanceScreenState extends State<AttendanceScreen>
           }),
         ],
       ),
-    );
+    ));
   }
 
   Widget _buildBadge(String text, Color color) {
