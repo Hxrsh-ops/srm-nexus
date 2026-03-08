@@ -164,6 +164,7 @@ class _LoginScreenState extends State<LoginScreen>
   bool _obscurePass = true; // Obscure password field
   bool _isLoading = false;
   Uint8List? _captchaBytes;
+  bool _captchaLoaded = false; // true once fetchCaptcha() has finished
 
   @override
   void initState() {
@@ -210,9 +211,17 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   Future<void> _fetchCaptcha() async {
-    setState(() => _captchaBytes = null);
+    setState(() {
+      _captchaBytes = null;
+      _captchaLoaded = false;
+    });
     final bytes = await Provider.of<AuthRepository>(context, listen: false).fetchCaptcha();
-    if (mounted) setState(() => _captchaBytes = bytes);
+    if (mounted) {
+      setState(() {
+        _captchaBytes = bytes;
+        _captchaLoaded = true; // fetch finished, bytes may be null (= no captcha)
+      });
+    }
   }
 
   void _handleLogin() async {
@@ -279,8 +288,6 @@ class _LoginScreenState extends State<LoginScreen>
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-
     return Scaffold(
       body: AnimatedBuilder(
         animation: _bgController,
@@ -293,18 +300,16 @@ class _LoginScreenState extends State<LoginScreen>
         child: SafeArea(
           child: SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
-            child: SizedBox(
-              height: size.height,
-              child: FadeTransition(
-                opacity: _fadeIn,
-                child: SlideTransition(
-                  position: _slideUp,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 28),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SizedBox(height: 60),
+            child: FadeTransition(
+              opacity: _fadeIn,
+              child: SlideTransition(
+                position: _slideUp,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 28),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 40),
 
                         // ── Logo & Title ──────────────────────────────────
                         Row(
@@ -440,42 +445,45 @@ class _LoginScreenState extends State<LoginScreen>
 
                         const SizedBox(height: 24),
 
-                        // ── CAPTCHA Field & Image ────────────────────────
-                        _buildLabel('VERIFICATION CODE'),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            Expanded(
-                              flex: 3,
-                              child: _buildTextField(
-                                controller: _captchaController,
-                                hint: 'Enter code',
-                                icon: Icons.security_rounded,
+                        // ── CAPTCHA Field & Image ─────────────────────────
+                        // Only shown when CAPTCHA is available (ApiAuth) — hidden for MockAuth
+                        if (!_captchaLoaded || _captchaBytes != null) ...[
+                          _buildLabel('VERIFICATION CODE'),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Expanded(
+                                flex: 3,
+                                child: _buildTextField(
+                                  controller: _captchaController,
+                                  hint: 'Enter code',
+                                  icon: Icons.security_rounded,
+                                ),
                               ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              flex: 2,
-                              child: GestureDetector(
-                                onTap: _fetchCaptcha,
-                                child: Container(
-                                  height: 58,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withValues(alpha: 0.05),
-                                    borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-                                  ),
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(16),
-                                    child: _captchaBytes == null 
-                                      ? Center(child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white.withValues(alpha: 0.5)))
-                                      : Image.memory(_captchaBytes!, fit: BoxFit.fill),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                flex: 2,
+                                child: GestureDetector(
+                                  onTap: _fetchCaptcha,
+                                  child: Container(
+                                    height: 58,
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withValues(alpha: 0.05),
+                                      borderRadius: BorderRadius.circular(16),
+                                      border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                                    ),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(16),
+                                      child: _captchaBytes == null
+                                        ? Center(child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white.withValues(alpha: 0.5)))
+                                        : Image.memory(_captchaBytes!, fit: BoxFit.fill),
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
+                            ],
+                          ),
+                        ],
 
                         const SizedBox(height: 12),
 
@@ -585,6 +593,7 @@ class _LoginScreenState extends State<LoginScreen>
                             showModalBottomSheet(
                               context: context,
                               isScrollControlled: true,
+                              enableDrag: false,
                               backgroundColor: Colors.transparent,
                               builder: (_) => SizedBox(
                                 height: MediaQuery.of(context).size.height * 0.93,
@@ -632,7 +641,7 @@ class _LoginScreenState extends State<LoginScreen>
                           ),
                         ),
 
-                        const SizedBox(height: 30),
+                        const SizedBox(height: 16),
 
                         // ── Bottom disclaimer ─────────────────────────────
                         Center(
@@ -647,8 +656,8 @@ class _LoginScreenState extends State<LoginScreen>
                             ),
                           ),
                         ),
-                      ],
-                    ),
+                        const SizedBox(height: 24),
+                    ],
                   ),
                 ),
               ),

@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../core/repositories/timetable_repository.dart';
-import '../core/models/class_model.dart';
-
+import 'dart:math' as math;
 
 class TimetableScreen extends StatefulWidget {
   final bool showBackButton;
@@ -14,345 +11,238 @@ class TimetableScreen extends StatefulWidget {
 
 class _TimetableScreenState extends State<TimetableScreen>
     with TickerProviderStateMixin {
-  bool _isLoading = true;
-  Map<int, List<ClassModel>> _weeklyTimetable = {};
-
   late AnimationController _entryController;
+  late AnimationController _pulseController;
   late Animation<double> _fadeIn;
-  late TabController _tabController;
+  late Animation<double> _pulse;
 
   final List<String> days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  final List<String> fullDays = [
-    'Monday',
-    'Tuesday',
-    'Wednesday',
-    'Thursday',
-    'Friday',
-    'Saturday',
-  ];
-
-  int get todayIndex {
-    final weekday = DateTime.now().weekday;
-    if (weekday >= 1 && weekday <= 6) return weekday - 1;
-    return 0;
-  }
-
-
 
   @override
   void initState() {
     super.initState();
-    _fetchData();
-
-    _tabController = TabController(
-      length: days.length,
-      vsync: this,
-      initialIndex: todayIndex,
-    );
     _entryController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 800),
     );
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat(reverse: true);
+
     _fadeIn = CurvedAnimation(parent: _entryController, curve: Curves.easeOut);
+    _pulse = CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut);
+
     Future.delayed(
-      const Duration(milliseconds: 100),
+      const Duration(milliseconds: 120),
       () => _entryController.forward(),
     );
   }
 
-
-  Future<void> _fetchData() async {
-    final repo = Provider.of<TimetableRepository>(context, listen: false);
-    try {
-      final timetable = await repo.getWeeklyTimetable();
-      if (mounted) {
-        setState(() {
-          _weeklyTimetable = timetable;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
   @override
   void dispose() {
-    _tabController.dispose();
     _entryController.dispose();
+    _pulseController.dispose();
     super.dispose();
-  }
-
-  bool _isCurrentClass(String timeStr) {
-    try {
-      final now = DateTime.now();
-      final startStr = timeStr.split(' - ')[0].trim();
-      final parts = startStr.split(':');
-      final classStart = DateTime(
-        now.year,
-        now.month,
-        now.day,
-        int.parse(parts[0]),
-        int.parse(parts[1]),
-      );
-      final classEnd = classStart.add(const Duration(minutes: 50));
-      return now.isAfter(classStart) && now.isBefore(classEnd);
-    } catch (_) {
-      return false;
-    }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return const Scaffold(
-        backgroundColor: Color(0xFF0A0A0F),
-        body: Center(child: CircularProgressIndicator(color: Color(0xFF00D4FF))),
-      );
-    }
     return Scaffold(
       backgroundColor: const Color(0xFF0A0A0F),
       body: SafeArea(
         child: FadeTransition(
           opacity: _fadeIn,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header
-              Padding(
-                padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-                child: Row(
-                  children: [
-                    if (widget.showBackButton) ...[
-                      GestureDetector(
-                        onTap: () => Navigator.pop(context),
-                        child: Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.06),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.08),
+          child: CustomScrollView(
+            physics: const BouncingScrollPhysics(),
+            slivers: [
+              // ── Header ────────────────────────────────────────────────────
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+                  child: Row(
+                    children: [
+                      if (widget.showBackButton) ...[
+                        GestureDetector(
+                          onTap: () => Navigator.pop(context),
+                          child: Container(
+                            width: 40, height: 40,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.06),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
                             ),
-                          ),
-                          child: const Icon(
-                            Icons.arrow_back_ios_new_rounded,
-                            color: Colors.white,
-                            size: 16,
+                            child: const Icon(Icons.arrow_back_ios_new_rounded,
+                                color: Colors.white, size: 16),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 16),
-                    ],
-                    Expanded(
-                      child: Column(
+                        const SizedBox(width: 16),
+                      ] else ...[
+                        GestureDetector(
+                          onTap: () => Scaffold.of(context).openDrawer(),
+                          child: Container(
+                            width: 40, height: 40,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.06),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                            ),
+                            child: const Icon(Icons.menu_rounded, color: Colors.white, size: 18),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                      ],
+                      Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            'Timetable',
-                            style: TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w800,
-                              color: Colors.white,
-                              letterSpacing: -0.5,
-                            ),
-                          ),
-                          Text(
-                            'Semester 2 • 2026',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.white.withValues(alpha: 0.35),
-                            ),
-                          ),
+                          const Text('Schedule',
+                              style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800,
+                                  color: Colors.white, letterSpacing: -0.5)),
+                          Text('Class Timetable',
+                              style: TextStyle(fontSize: 12,
+                                  color: Colors.white.withValues(alpha: 0.35))),
                         ],
                       ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF6C63FF).withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: const Color(0xFF6C63FF).withValues(alpha: 0.3),
-                        ),
-                      ),
-                      child: Text(
-                        'Today: ${days[todayIndex]}',
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF6C63FF),
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
 
-              const SizedBox(height: 24),
-
-              // Day Tab Bar
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Container(
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.04),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.07),
+              // ── Day pills (decorative, greyed out) ────────────────────────
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+                  child: SizedBox(
+                    height: 40,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: days.length,
+                      separatorBuilder: (_, __) => const SizedBox(width: 8),
+                      itemBuilder: (context, i) => AnimatedBuilder(
+                        animation: _pulse,
+                        builder: (context, _) => Opacity(
+                          opacity: 0.2 + (i == 1 ? _pulse.value * 0.15 : 0),
+                          child: Container(
+                            width: 52,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.04),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+                            ),
+                            child: Center(
+                              child: Text(days[i],
+                                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700,
+                                      color: Colors.white.withValues(alpha: 0.2))),
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
                   ),
-                  child: TabBar(
-                    controller: _tabController,
-                    isScrollable: false,
-                    dividerColor: Colors.transparent,
-                    indicator: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF6C63FF), Color(0xFF00D4FF)],
-                      ),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    indicatorSize: TabBarIndicatorSize.tab,
-                    indicatorPadding: const EdgeInsets.all(4),
-                    labelPadding: EdgeInsets.zero,
-                    labelColor: Colors.white,
-                    unselectedLabelColor: Colors.white38,
-                    labelStyle: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                    ),
-                    unselectedLabelStyle: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                    ),
-                    tabs: days.map((d) {
-                      final isToday = days.indexOf(d) == todayIndex;
-                      return Tab(
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(d),
-                            if (isToday) ...[
-                              const SizedBox(width: 3),
+                ),
+              ),
+
+              const SliverToBoxAdapter(child: SizedBox(height: 40)),
+
+              // ── Main pending card ─────────────────────────────────────────
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: AnimatedBuilder(
+                    animation: _pulse,
+                    builder: (context, child) {
+                      return Container(
+                        padding: const EdgeInsets.all(32),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              const Color(0xFF6C63FF).withValues(alpha: 0.12 + _pulse.value * 0.04),
+                              const Color(0xFF00D4FF).withValues(alpha: 0.05),
+                            ],
+                            begin: Alignment.topLeft, end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(
+                            color: const Color(0xFF6C63FF).withValues(alpha: 0.2 + _pulse.value * 0.08),
+                          ),
+                        ),
+                        child: child,
+                      );
+                    },
+                    child: Column(
+                      children: [
+                        // Orbit icon
+                        _OrbitIcon(pulse: _pulse),
+                        const SizedBox(height: 28),
+                        const Text(
+                          'Timetable Pending',
+                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800,
+                              color: Colors.white, letterSpacing: -0.3),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          'Your class timetable will be available once\nSRM portal access is connected.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 13.5,
+                              color: Colors.white.withValues(alpha: 0.45), height: 1.6),
+                        ),
+                        const SizedBox(height: 28),
+                        // Status pill
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFB347).withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: const Color(0xFFFFB347).withValues(alpha: 0.3)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
                               Container(
-                                width: 5,
-                                height: 5,
+                                width: 6, height: 6,
                                 decoration: const BoxDecoration(
-                                  color: Color(0xFF4ECB71),
+                                  color: Color(0xFFFFB347),
                                   shape: BoxShape.circle,
                                 ),
                               ),
+                              const SizedBox(width: 8),
+                              const Text('Awaiting Server Access',
+                                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700,
+                                      color: Color(0xFFFFB347), letterSpacing: 0.5)),
                             ],
-                          ],
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 20),
-
-              AnimatedBuilder(
-                animation: _tabController,
-                builder: (context, _) {
-                  final dayIdx = _tabController.index;
-                  final classes = _weeklyTimetable[dayIdx + 1] ?? [];
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: Row(
-                      children: [
-                        Text(
-                          '${classes.length} classes',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white.withValues(alpha: 0.6),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          width: 4,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.2),
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          fullDays[dayIdx],
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Colors.white.withValues(alpha: 0.3),
                           ),
                         ),
                       ],
                     ),
-                  );
-                },
-              ),
-
-              const SizedBox(height: 14),
-
-              Expanded(
-                child: TabBarView(
-                  controller: _tabController,
-                  children: List.generate(days.length, (dayIdx) {
-                    final classes = _weeklyTimetable[dayIdx + 1] ?? [];
-                    if (classes.isEmpty) {
-                      return Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.wb_sunny_outlined,
-                              size: 48,
-                              color: Colors.white.withValues(alpha: 0.15),
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'No classes today!',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.white.withValues(alpha: 0.3),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Enjoy your day 🎉',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.white.withValues(alpha: 0.2),
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    }
-                    return ListView.builder(
-                      physics: const BouncingScrollPhysics(),
-                      padding: const EdgeInsets.fromLTRB(24, 0, 24, 100),
-                      itemCount: classes.length,
-                      itemBuilder: (context, index) {
-                        final cls = classes[index];
-                        final isCurrent =
-                            dayIdx == todayIndex &&
-                            _isCurrentClass(cls.time);
-                        return _buildClassCard(cls, isCurrent);
-                      },
-                    );
-                  }),
+                  ),
                 ),
               ),
+
+              const SliverToBoxAdapter(child: SizedBox(height: 28)),
+
+              // ── What you'll see section ───────────────────────────────────
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Text('WHAT YOU\'LL GET',
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700,
+                          color: Colors.white.withValues(alpha: 0.3), letterSpacing: 3)),
+                ),
+              ),
+
+              const SliverToBoxAdapter(child: SizedBox(height: 14)),
+
+              SliverList(
+                delegate: SliverChildListDelegate([
+                  _featureRow(Icons.access_time_rounded,   'Real-time class schedule',  'Track today\'s and upcoming classes',    const Color(0xFF6C63FF)),
+                  _featureRow(Icons.notifications_rounded,  'Class reminders',            '5-min alerts before each class',        const Color(0xFF00D4FF)),
+                  _featureRow(Icons.map_outlined,           'Classroom navigation',       'Find your class room on campus map',    const Color(0xFF4ECB71)),
+                  _featureRow(Icons.swap_horiz_rounded,     'Substitution alerts',        'Know when a class is cancelled/moved',  const Color(0xFFFFB347)),
+                ]),
+              ),
+
+              const SliverToBoxAdapter(child: SizedBox(height: 100)),
             ],
           ),
         ),
@@ -360,198 +250,136 @@ class _TimetableScreenState extends State<TimetableScreen>
     );
   }
 
-  Widget _buildClassCard(ClassModel cls, bool isCurrent) {
-    final color = cls.color;
-    final isLab = cls.type == 'Lab';
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 72,
-            child: Padding(
-              padding: const EdgeInsets.only(top: 14),
+  Widget _featureRow(IconData icon, String title, String sub, Color color) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 0, 24, 10),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.03),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 42, height: 42,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: color, size: 20),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    cls.time.split(' - ')[0],
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: isCurrent
-                          ? color
-                          : Colors.white.withValues(alpha: 0.5),
-                    ),
-                  ),
-                  Text(
-                    cls.time.split(' - ')[1],
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Colors.white.withValues(alpha: 0.25),
-                    ),
-                  ),
+                  Text(title, style: const TextStyle(fontSize: 13,
+                      fontWeight: FontWeight.w700, color: Colors.white)),
+                  const SizedBox(height: 2),
+                  Text(sub, style: TextStyle(fontSize: 11,
+                      color: Colors.white.withValues(alpha: 0.35))),
                 ],
               ),
             ),
-          ),
-          Column(
+            Icon(Icons.lock_outline_rounded, size: 16,
+                color: Colors.white.withValues(alpha: 0.12)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Animated orbit icon ────────────────────────────────────────────────────
+class _OrbitIcon extends StatefulWidget {
+  final Animation<double> pulse;
+  const _OrbitIcon({required this.pulse});
+  @override
+  State<_OrbitIcon> createState() => _OrbitIconState();
+}
+
+class _OrbitIconState extends State<_OrbitIcon> with SingleTickerProviderStateMixin {
+  late AnimationController _orbitCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _orbitCtrl = AnimationController(vsync: this, duration: const Duration(seconds: 4))..repeat();
+  }
+
+  @override
+  void dispose() {
+    _orbitCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 110, height: 110,
+      child: AnimatedBuilder(
+        animation: Listenable.merge([_orbitCtrl, widget.pulse]),
+        builder: (context, _) {
+          return Stack(
+            alignment: Alignment.center,
             children: [
-              const SizedBox(height: 16),
+              // Outer glow ring
               Container(
-                width: isCurrent ? 14 : 10,
-                height: isCurrent ? 14 : 10,
+                width: 100, height: 100,
                 decoration: BoxDecoration(
-                  color: isCurrent
-                      ? color
-                      : Colors.white.withValues(alpha: 0.15),
                   shape: BoxShape.circle,
-                  boxShadow: isCurrent
-                      ? [
-                          BoxShadow(
-                            color: color.withValues(alpha: 0.5),
-                            blurRadius: 8,
-                          ),
-                        ]
-                      : [],
+                  border: Border.all(
+                    color: const Color(0xFF6C63FF).withValues(alpha: 0.12 + widget.pulse.value * 0.1),
+                    width: 1.5,
+                  ),
                 ),
               ),
+              // Inner ring
               Container(
-                width: 1,
-                height: 70,
-                color: Colors.white.withValues(alpha: 0.06),
+                width: 76, height: 76,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      const Color(0xFF6C63FF).withValues(alpha: 0.2 + widget.pulse.value * 0.08),
+                      Colors.transparent,
+                    ],
+                  ),
+                  border: Border.all(
+                    color: const Color(0xFF6C63FF).withValues(alpha: 0.2),
+                    width: 1,
+                  ),
+                ),
+                child: const Center(
+                  child: Icon(Icons.calendar_month_rounded,
+                      color: Color(0xFF6C63FF), size: 30),
+                ),
+              ),
+              // Orbiting dot
+              Transform.rotate(
+                angle: _orbitCtrl.value * 2 * math.pi,
+                child: Transform.translate(
+                  offset: const Offset(0, -44),
+                  child: Container(
+                    width: 8, height: 8,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF00D4FF),
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF00D4FF).withValues(alpha: 0.6),
+                          blurRadius: 6,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
             ],
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Container(
-              margin: const EdgeInsets.only(bottom: 4),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: isCurrent
-                    ? color.withValues(alpha: 0.12)
-                    : Colors.white.withValues(alpha: 0.04),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: isCurrent
-                      ? color.withValues(alpha: 0.35)
-                      : Colors.white.withValues(alpha: 0.07),
-                  width: isCurrent ? 1.5 : 1,
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          cls.subject,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 3,
-                        ),
-                        decoration: BoxDecoration(
-                          color: isLab
-                              ? const Color(0xFFFFB347).withValues(alpha: 0.15)
-                              : color.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          cls.type,
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w700,
-                            color: isLab ? const Color(0xFFFFB347) : color,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.location_on_outlined,
-                        size: 13,
-                        color: Colors.white.withValues(alpha: 0.3),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        cls.room,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.white.withValues(alpha: 0.4),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Icon(
-                        Icons.tag,
-                        size: 13,
-                        color: Colors.white.withValues(alpha: 0.3),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        cls.code,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.white.withValues(alpha: 0.4),
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (isCurrent) ...[
-                    const SizedBox(height: 10),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: color.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            width: 6,
-                            height: 6,
-                            decoration: BoxDecoration(
-                              color: color,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            'Happening now',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: color,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ),
-        ],
+          );
+        },
       ),
     );
   }

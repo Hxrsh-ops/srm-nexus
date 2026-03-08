@@ -284,7 +284,7 @@ class _MainScaffoldState extends State<MainScaffold>
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'RA2411026010XXX',
+                    'RA2511026020400',
                     style: TextStyle(
                       fontSize: 12,
                       color: Colors.white.withValues(alpha: 0.4),
@@ -293,7 +293,7 @@ class _MainScaffoldState extends State<MainScaffold>
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    'B.Tech CSE (AI & ML) • Sem 2',
+                    'B.Tech CSE (AI & ML) · Sem 2',
                     style: TextStyle(
                       fontSize: 12,
                       color: Colors.white.withValues(alpha: 0.3),
@@ -823,7 +823,7 @@ class _ProfileTab extends StatelessWidget {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'RA2411026010XXX',
+                              'RA2511026020400',
                               style: TextStyle(
                                 fontSize: 12,
                                 color: Colors.white.withValues(alpha: 0.4),
@@ -831,7 +831,7 @@ class _ProfileTab extends StatelessWidget {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              'CSE (AI & ML) • 1st Year',
+                              'CSE (AI & ML) · 2nd Year',
                               style: TextStyle(
                                 fontSize: 12,
                                 color: Colors.white.withValues(alpha: 0.3),

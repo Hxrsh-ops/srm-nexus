@@ -78,8 +78,8 @@ class _SrmWebViewLoginScreenState extends State<SrmWebViewLoginScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF0A0A0F),
-      body: SafeArea(
-        child: Column(
+      resizeToAvoidBottomInset: true,
+      body: Column(
           children: [
             // ── Header ─────────────────────────────────────────────────────
             Container(
@@ -216,7 +216,6 @@ class _SrmWebViewLoginScreenState extends State<SrmWebViewLoginScreen> {
             ),
           ],
         ),
-      ),
-    );
+      );
   }
 }
