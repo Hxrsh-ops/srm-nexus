@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../core/repositories/timetable_repository.dart';
+import '../core/models/class_model.dart';
+
 
 class TimetableScreen extends StatefulWidget {
   final bool showBackButton;
@@ -10,6 +14,9 @@ class TimetableScreen extends StatefulWidget {
 
 class _TimetableScreenState extends State<TimetableScreen>
     with TickerProviderStateMixin {
+  bool _isLoading = true;
+  Map<int, List<ClassModel>> _weeklyTimetable = {};
+
   late AnimationController _entryController;
   late Animation<double> _fadeIn;
   late TabController _tabController;
@@ -30,208 +37,13 @@ class _TimetableScreenState extends State<TimetableScreen>
     return 0;
   }
 
-  final Map<int, List<Map<String, dynamic>>> timetable = {
-    0: [
-      {
-        'time': '08:00 - 08:50',
-        'subject': 'OOP & Design',
-        'code': '21CSC101T',
-        'room': 'CB-301',
-        'type': 'Theory',
-        'color': Color(0xFF6C63FF),
-      },
-      {
-        'time': '09:00 - 09:50',
-        'subject': 'Advanced Calculus',
-        'code': '21MAB102T',
-        'room': 'CB-205',
-        'type': 'Theory',
-        'color': Color(0xFF00D4FF),
-      },
-      {
-        'time': '10:00 - 10:50',
-        'subject': 'Chemistry',
-        'code': '21CYB101J',
-        'room': 'Lab-12',
-        'type': 'Lab',
-        'color': Color(0xFFFF6B6B),
-      },
-      {
-        'time': '11:00 - 11:50',
-        'subject': 'German',
-        'code': '21LEH104T',
-        'room': 'LH-104',
-        'type': 'Theory',
-        'color': Color(0xFFFFB347),
-      },
-      {
-        'time': '14:00 - 14:50',
-        'subject': 'Electrical Engg',
-        'code': '21EES101T',
-        'room': 'CB-401',
-        'type': 'Theory',
-        'color': Color(0xFF4ECB71),
-      },
-    ],
-    1: [
-      {
-        'time': '08:00 - 08:50',
-        'subject': 'Environmental Science',
-        'code': '21CYM101T',
-        'room': 'CB-102',
-        'type': 'Theory',
-        'color': Color(0xFFFF69B4),
-      },
-      {
-        'time': '09:00 - 09:50',
-        'subject': 'OOP & Design',
-        'code': '21CSC101T',
-        'room': 'Lab-08',
-        'type': 'Lab',
-        'color': Color(0xFF6C63FF),
-      },
-      {
-        'time': '11:00 - 11:50',
-        'subject': 'Advanced Calculus',
-        'code': '21MAB102T',
-        'room': 'CB-205',
-        'type': 'Theory',
-        'color': Color(0xFF00D4FF),
-      },
-      {
-        'time': '14:00 - 14:50',
-        'subject': 'German',
-        'code': '21LEH104T',
-        'room': 'LH-104',
-        'type': 'Theory',
-        'color': Color(0xFFFFB347),
-      },
-    ],
-    2: [
-      {
-        'time': '08:00 - 08:50',
-        'subject': 'Electrical Engg',
-        'code': '21EES101T',
-        'room': 'CB-401',
-        'type': 'Theory',
-        'color': Color(0xFF4ECB71),
-      },
-      {
-        'time': '10:00 - 10:50',
-        'subject': 'Chemistry',
-        'code': '21CYB101J',
-        'room': 'CB-302',
-        'type': 'Theory',
-        'color': Color(0xFFFF6B6B),
-      },
-      {
-        'time': '11:00 - 11:50',
-        'subject': 'OOP & Design',
-        'code': '21CSC101T',
-        'room': 'CB-301',
-        'type': 'Theory',
-        'color': Color(0xFF6C63FF),
-      },
-      {
-        'time': '14:00 - 15:50',
-        'subject': 'Electrical Engg Lab',
-        'code': '21EES101T',
-        'room': 'EE-Lab2',
-        'type': 'Lab',
-        'color': Color(0xFF4ECB71),
-      },
-    ],
-    3: [
-      {
-        'time': '09:00 - 09:50',
-        'subject': 'Advanced Calculus',
-        'code': '21MAB102T',
-        'room': 'CB-205',
-        'type': 'Theory',
-        'color': Color(0xFF00D4FF),
-      },
-      {
-        'time': '10:00 - 10:50',
-        'subject': 'Environmental Science',
-        'code': '21CYM101T',
-        'room': 'CB-102',
-        'type': 'Theory',
-        'color': Color(0xFFFF69B4),
-      },
-      {
-        'time': '11:00 - 11:50',
-        'subject': 'German',
-        'code': '21LEH104T',
-        'room': 'LH-104',
-        'type': 'Theory',
-        'color': Color(0xFFFFB347),
-      },
-      {
-        'time': '14:00 - 15:50',
-        'subject': 'Chemistry Lab',
-        'code': '21CYB101J',
-        'room': 'Chem-Lab1',
-        'type': 'Lab',
-        'color': Color(0xFFFF6B6B),
-      },
-    ],
-    4: [
-      {
-        'time': '08:00 - 08:50',
-        'subject': 'OOP & Design',
-        'code': '21CSC101T',
-        'room': 'CB-301',
-        'type': 'Theory',
-        'color': Color(0xFF6C63FF),
-      },
-      {
-        'time': '09:00 - 09:50',
-        'subject': 'Electrical Engg',
-        'code': '21EES101T',
-        'room': 'CB-401',
-        'type': 'Theory',
-        'color': Color(0xFF4ECB71),
-      },
-      {
-        'time': '11:00 - 11:50',
-        'subject': 'Chemistry',
-        'code': '21CYB101J',
-        'room': 'CB-302',
-        'type': 'Theory',
-        'color': Color(0xFFFF6B6B),
-      },
-      {
-        'time': '14:00 - 14:50',
-        'subject': 'Environmental Science',
-        'code': '21CYM101T',
-        'room': 'CB-102',
-        'type': 'Theory',
-        'color': Color(0xFFFF69B4),
-      },
-    ],
-    5: [
-      {
-        'time': '09:00 - 09:50',
-        'subject': 'Advanced Calculus',
-        'code': '21MAB102T',
-        'room': 'CB-205',
-        'type': 'Theory',
-        'color': Color(0xFF00D4FF),
-      },
-      {
-        'time': '10:00 - 10:50',
-        'subject': 'OOP & Design',
-        'code': '21CSC101T',
-        'room': 'Lab-08',
-        'type': 'Lab',
-        'color': Color(0xFF6C63FF),
-      },
-    ],
-  };
+
 
   @override
   void initState() {
     super.initState();
+    _fetchData();
+
     _tabController = TabController(
       length: days.length,
       vsync: this,
@@ -246,6 +58,22 @@ class _TimetableScreenState extends State<TimetableScreen>
       const Duration(milliseconds: 100),
       () => _entryController.forward(),
     );
+  }
+
+
+  Future<void> _fetchData() async {
+    final repo = Provider.of<TimetableRepository>(context, listen: false);
+    try {
+      final timetable = await repo.getWeeklyTimetable();
+      if (mounted) {
+        setState(() {
+          _weeklyTimetable = timetable;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -276,6 +104,12 @@ class _TimetableScreenState extends State<TimetableScreen>
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        backgroundColor: Color(0xFF0A0A0F),
+        body: Center(child: CircularProgressIndicator(color: Color(0xFF00D4FF))),
+      );
+    }
     return Scaffold(
       backgroundColor: const Color(0xFF0A0A0F),
       body: SafeArea(
@@ -430,7 +264,7 @@ class _TimetableScreenState extends State<TimetableScreen>
                 animation: _tabController,
                 builder: (context, _) {
                   final dayIdx = _tabController.index;
-                  final classes = timetable[dayIdx] ?? [];
+                  final classes = _weeklyTimetable[dayIdx + 1] ?? [];
                   return Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 24),
                     child: Row(
@@ -472,7 +306,7 @@ class _TimetableScreenState extends State<TimetableScreen>
                 child: TabBarView(
                   controller: _tabController,
                   children: List.generate(days.length, (dayIdx) {
-                    final classes = timetable[dayIdx] ?? [];
+                    final classes = _weeklyTimetable[dayIdx + 1] ?? [];
                     if (classes.isEmpty) {
                       return Center(
                         child: Column(
@@ -512,7 +346,7 @@ class _TimetableScreenState extends State<TimetableScreen>
                         final cls = classes[index];
                         final isCurrent =
                             dayIdx == todayIndex &&
-                            _isCurrentClass(cls['time']);
+                            _isCurrentClass(cls.time);
                         return _buildClassCard(cls, isCurrent);
                       },
                     );
@@ -526,9 +360,9 @@ class _TimetableScreenState extends State<TimetableScreen>
     );
   }
 
-  Widget _buildClassCard(Map<String, dynamic> cls, bool isCurrent) {
-    final color = cls['color'] as Color;
-    final isLab = cls['type'] == 'Lab';
+  Widget _buildClassCard(ClassModel cls, bool isCurrent) {
+    final color = cls.color;
+    final isLab = cls.type == 'Lab';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -543,7 +377,7 @@ class _TimetableScreenState extends State<TimetableScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    cls['time'].toString().split(' - ')[0],
+                    cls.time.split(' - ')[0],
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
@@ -553,7 +387,7 @@ class _TimetableScreenState extends State<TimetableScreen>
                     ),
                   ),
                   Text(
-                    cls['time'].toString().split(' - ')[1],
+                    cls.time.split(' - ')[1],
                     style: TextStyle(
                       fontSize: 11,
                       color: Colors.white.withValues(alpha: 0.25),
@@ -615,7 +449,7 @@ class _TimetableScreenState extends State<TimetableScreen>
                     children: [
                       Expanded(
                         child: Text(
-                          cls['subject'],
+                          cls.subject,
                           style: const TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w700,
@@ -635,7 +469,7 @@ class _TimetableScreenState extends State<TimetableScreen>
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
-                          cls['type'],
+                          cls.type,
                           style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.w700,
@@ -656,7 +490,7 @@ class _TimetableScreenState extends State<TimetableScreen>
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        cls['room'],
+                        cls.room,
                         style: TextStyle(
                           fontSize: 12,
                           color: Colors.white.withValues(alpha: 0.4),
@@ -670,7 +504,7 @@ class _TimetableScreenState extends State<TimetableScreen>
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        cls['code'],
+                        cls.code,
                         style: TextStyle(
                           fontSize: 12,
                           color: Colors.white.withValues(alpha: 0.4),

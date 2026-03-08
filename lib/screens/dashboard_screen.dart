@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../core/repositories/auth_repository.dart';
+import '../core/models/student_model.dart';
+
 import 'package:flutter/services.dart';
 import 'dart:math' as math;
 import 'attendance_screen.dart';
@@ -18,7 +22,9 @@ class _DashboardScreenState extends State<DashboardScreen>
   late AnimationController _entryController;
   late Animation<double> _fadeIn;
 
-  final String studentName = "Harshanth";
+  StudentModel? _studentProfile;
+  bool _isLoading = true;
+
   final String semester = "2nd Semester";
   final double gpa = 9.2;
 
@@ -88,9 +94,25 @@ class _DashboardScreenState extends State<DashboardScreen>
     },
   ];
 
+  Future<void> _fetchData() async {
+    final authRepo = Provider.of<AuthRepository>(context, listen: false);
+    try {
+      final profile = await authRepo.getStudentProfile();
+      if (mounted) {
+        setState(() {
+          _studentProfile = profile;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
   @override
   void initState() {
     super.initState();
+    _fetchData();
     _bgController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 8),
@@ -159,6 +181,12 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading || _studentProfile == null) {
+      return const Scaffold(
+        backgroundColor: Color(0xFF0A0A0F),
+        body: Center(child: CircularProgressIndicator(color: Color(0xFF00D4FF))),
+      );
+    }
     return Scaffold(
       backgroundColor: const Color(0xFF0A0A0F),
       body: AnimatedBuilder(
@@ -242,7 +270,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                                       ],
                                     ).createShader(bounds),
                                 child: Text(
-                                  studentName,
+                                  _studentProfile!.name,
                                   style: const TextStyle(
                                     fontSize: 28,
                                     fontWeight: FontWeight.w900,
@@ -276,7 +304,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                           ),
                           child: Center(
                             child: Text(
-                              studentName[0],
+                              _studentProfile!.name[0],
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 20,

@@ -1,7 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_displaymode/flutter_displaymode.dart';
 import 'dart:math' as math;
+import 'dart:typed_data';
 import 'screens/main_scaffold.dart';
+
+import 'package:provider/provider.dart';
+import 'core/repositories/auth_repository.dart';
+import 'core/repositories/attendance_repository.dart';
+import 'core/repositories/timetable_repository.dart';
+import 'core/services/api_auth_service.dart';
+import 'core/services/mock_attendance_service.dart';
+import 'core/services/mock_timetable_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -10,7 +19,17 @@ void main() async {
   } catch (e) {
     // Ignore if not supported (e.g., iOS or older Android)
   }
-  runApp(const SRMNexusApp());
+  
+  runApp(
+    MultiProvider(
+        providers: [
+          Provider<AuthRepository>(create: (_) => ApiAuthService()),
+          Provider<AttendanceRepository>(create: (_) => MockAttendanceService()),
+        Provider<TimetableRepository>(create: (_) => MockTimetableService()),
+      ],
+      child: const SRMNexusApp(),
+    ),
+  );
 }
 
 class SRMNexusApp extends StatelessWidget {
@@ -137,12 +156,15 @@ class _LoginScreenState extends State<LoginScreen>
 
   final _regController = TextEditingController();
   final _passController = TextEditingController();
-  bool _obscurePass = false; // Temporarily disabled for screen recording
+  final _captchaController = TextEditingController();
+  bool _obscurePass = true; // Obscure password field
   bool _isLoading = false;
+  Uint8List? _captchaBytes;
 
   @override
   void initState() {
     super.initState();
+    _fetchCaptcha();
 
     _bgController = AnimationController(
       vsync: this,
@@ -178,17 +200,24 @@ class _LoginScreenState extends State<LoginScreen>
     _entryController.dispose();
     _regController.dispose();
     _passController.dispose();
+    _captchaController.dispose();
     super.dispose();
+  }
+
+  Future<void> _fetchCaptcha() async {
+    setState(() => _captchaBytes = null);
+    final bytes = await Provider.of<AuthRepository>(context, listen: false).fetchCaptcha();
+    if (mounted) setState(() => _captchaBytes = bytes);
   }
 
   void _handleLogin() async {
     // Drop the keyboard immediately to prevent Android window resize ghosting
     FocusScope.of(context).unfocus();
     
-    if (_regController.text.isEmpty || _passController.text.isEmpty) {
+    if (_regController.text.isEmpty || _passController.text.isEmpty || _captchaController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Please enter your credentials'),
+          content: const Text('Please enter all credentials and verification code'),
           backgroundColor: Colors.red.shade800,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
@@ -200,16 +229,33 @@ class _LoginScreenState extends State<LoginScreen>
     }
 
     setState(() => _isLoading = true);
-    await Future.delayed(const Duration(seconds: 2));
+    final authRepo = Provider.of<AuthRepository>(context, listen: false);
+    final success = await authRepo.login(_regController.text, _passController.text, _captchaController.text);
+    
+    if (!mounted) return;
     setState(() => _isLoading = false);
 
-    if (!mounted) return;
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const MainScaffold(),
-      ),
-    );
+    if (success) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const MainScaffold(),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Login Failed. Please check your credentials or CAPTCHA.'),
+          backgroundColor: Colors.red.shade800,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      );
+      _captchaController.clear();
+      _fetchCaptcha();
+    }
   }
 
   @override
@@ -371,6 +417,45 @@ class _LoginScreenState extends State<LoginScreen>
                             onPressed: () =>
                                 setState(() => _obscurePass = !_obscurePass),
                           ),
+                        ),
+
+                        const SizedBox(height: 24),
+
+                        // ── CAPTCHA Field & Image ────────────────────────
+                        _buildLabel('VERIFICATION CODE'),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Expanded(
+                              flex: 3,
+                              child: _buildTextField(
+                                controller: _captchaController,
+                                hint: 'Enter code',
+                                icon: Icons.security_rounded,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              flex: 2,
+                              child: GestureDetector(
+                                onTap: _fetchCaptcha,
+                                child: Container(
+                                  height: 58,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.05),
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                                  ),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(16),
+                                    child: _captchaBytes == null 
+                                      ? Center(child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white.withValues(alpha: 0.5)))
+                                      : Image.memory(_captchaBytes!, fit: BoxFit.fill),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
 
                         const SizedBox(height: 12),

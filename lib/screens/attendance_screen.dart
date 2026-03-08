@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../core/repositories/attendance_repository.dart';
+import '../core/models/attendance_model.dart';
+
 import 'dart:math' as math;
 
 class AttendanceScreen extends StatefulWidget {
@@ -11,6 +15,10 @@ class AttendanceScreen extends StatefulWidget {
 
 class _AttendanceScreenState extends State<AttendanceScreen>
     with TickerProviderStateMixin {
+  bool _isLoading = true;
+  List<SubjectAttendance> _subjectAttendance = [];
+  double _overallPercent = 0.0;
+
   late AnimationController _entryController;
   late AnimationController _bgController;
   late Animation<double> _fadeIn;
@@ -144,6 +152,7 @@ class _AttendanceScreenState extends State<AttendanceScreen>
   @override
   void initState() {
     super.initState();
+    _fetchData();
     _tabController = TabController(length: 2, vsync: this);
     _bgController = AnimationController(
       vsync: this,
@@ -158,6 +167,24 @@ class _AttendanceScreenState extends State<AttendanceScreen>
       const Duration(milliseconds: 100),
       () => _entryController.forward(),
     );
+  }
+
+
+  Future<void> _fetchData() async {
+    final repo = Provider.of<AttendanceRepository>(context, listen: false);
+    try {
+      final overall = await repo.getOverallAttendance();
+      final subjects = await repo.getSubjectAttendance();
+      if (mounted) {
+        setState(() {
+          _overallPercent = overall;
+          _subjectAttendance = subjects;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -197,14 +224,18 @@ class _AttendanceScreenState extends State<AttendanceScreen>
   }
 
   // Overall computed stats
-  int get totalPresent => subjectData.fold(0, (s, d) => s + (d['ph'] as int));
-  int get totalHours => subjectData.fold(0, (s, d) => s + (d['th'] as int));
-  int get totalAbsent => subjectData.fold(0, (s, d) => s + (d['ah'] as int));
-  double get overallPercent =>
-      totalHours == 0 ? 0 : (totalPresent / totalHours) * 100;
+  int get totalPresent => _subjectAttendance.fold(0, (s, d) => s + d.attended);
+  int get totalHours => _subjectAttendance.fold(0, (s, d) => s + d.total);
+  int get totalAbsent => _subjectAttendance.fold(0, (s, d) => s + (d.total - d.attended));
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        backgroundColor: Color(0xFF0A0A0F),
+        body: Center(child: CircularProgressIndicator(color: Color(0xFF6C63FF))),
+      );
+    }
     return Scaffold(
       backgroundColor: const Color(0xFF0A0A0F),
       body: AnimatedBuilder(
@@ -408,15 +439,15 @@ class _AttendanceScreenState extends State<AttendanceScreen>
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            _getColor(overallPercent).withValues(alpha: 0.15),
-            _getColor(overallPercent).withValues(alpha: 0.05),
+            _getColor(_overallPercent).withValues(alpha: 0.15),
+            _getColor(_overallPercent).withValues(alpha: 0.05),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: _getColor(overallPercent).withValues(alpha: 0.3),
+          color: _getColor(_overallPercent).withValues(alpha: 0.3),
         ),
       ),
       child: Row(
@@ -435,7 +466,7 @@ class _AttendanceScreenState extends State<AttendanceScreen>
                     value: 1,
                     strokeWidth: 7,
                     valueColor: AlwaysStoppedAnimation<Color>(
-                      _getColor(overallPercent).withValues(alpha: 0.15),
+                      _getColor(_overallPercent).withValues(alpha: 0.15),
                     ),
                   ),
                 ),
@@ -443,11 +474,11 @@ class _AttendanceScreenState extends State<AttendanceScreen>
                   width: 80,
                   height: 80,
                   child: CircularProgressIndicator(
-                    value: overallPercent / 100,
+                    value: _overallPercent / 100,
                     strokeWidth: 7,
                     backgroundColor: Colors.transparent,
                     valueColor: AlwaysStoppedAnimation<Color>(
-                      _getColor(overallPercent),
+                      _getColor(_overallPercent),
                     ),
                     strokeCap: StrokeCap.round,
                   ),
@@ -456,7 +487,7 @@ class _AttendanceScreenState extends State<AttendanceScreen>
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      '${overallPercent.toStringAsFixed(1)}%',
+                      '${_overallPercent.toStringAsFixed(1)}%',
                       style: const TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w900,
