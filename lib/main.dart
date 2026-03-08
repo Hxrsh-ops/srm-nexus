@@ -3,14 +3,17 @@ import 'package:flutter_displaymode/flutter_displaymode.dart';
 import 'dart:math' as math;
 import 'dart:typed_data';
 import 'screens/main_scaffold.dart';
+import 'screens/srm_webview_login_screen.dart';
 
 import 'package:provider/provider.dart';
 import 'core/repositories/auth_repository.dart';
 import 'core/repositories/attendance_repository.dart';
 import 'core/repositories/timetable_repository.dart';
-import 'core/services/api_auth_service.dart';
+import 'core/services/mock_auth_service.dart';
 import 'core/services/mock_attendance_service.dart';
 import 'core/services/mock_timetable_service.dart';
+import 'core/repositories/results_repository.dart';
+import 'core/services/mock_results_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,9 +26,10 @@ void main() async {
   runApp(
     MultiProvider(
         providers: [
-          Provider<AuthRepository>(create: (_) => ApiAuthService()),
+          Provider<AuthRepository>(create: (_) => MockAuthService()),
           Provider<AttendanceRepository>(create: (_) => MockAttendanceService()),
         Provider<TimetableRepository>(create: (_) => MockTimetableService()),
+        Provider<ResultsRepository>(create: (_) => MockResultsService()),
       ],
       child: const SRMNexusApp(),
     ),
@@ -164,7 +168,8 @@ class _LoginScreenState extends State<LoginScreen>
   @override
   void initState() {
     super.initState();
-    _fetchCaptcha();
+    // Only try to fetch CAPTCHA if the auth service supports it (non-null response)
+    WidgetsBinding.instance.addPostFrameCallback((_) => _fetchCaptcha());
 
     _bgController = AnimationController(
       vsync: this,
@@ -214,10 +219,24 @@ class _LoginScreenState extends State<LoginScreen>
     // Drop the keyboard immediately to prevent Android window resize ghosting
     FocusScope.of(context).unfocus();
     
-    if (_regController.text.isEmpty || _passController.text.isEmpty || _captchaController.text.isEmpty) {
+    // Require CAPTCHA code only when a real CAPTCHA image is loaded
+    if (_regController.text.isEmpty || _passController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Please enter all credentials and verification code'),
+          content: const Text('Please enter your credentials'),
+          backgroundColor: Colors.red.shade800,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      );
+      return;
+    }
+    if (_captchaBytes != null && _captchaController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Please enter the verification code shown in the image'),
           backgroundColor: Colors.red.shade800,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
@@ -536,7 +555,84 @@ class _LoginScreenState extends State<LoginScreen>
                           ),
                         ),
 
-                        const SizedBox(height: 40),
+                        const SizedBox(height: 20),
+
+                        // ── OR Divider ─────────────────────────────────────
+                        Row(
+                          children: [
+                            Expanded(child: Container(height: 1, color: Colors.white.withValues(alpha: 0.07))),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 14),
+                              child: Text(
+                                'OR',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white.withValues(alpha: 0.25),
+                                  letterSpacing: 2,
+                                ),
+                              ),
+                            ),
+                            Expanded(child: Container(height: 1, color: Colors.white.withValues(alpha: 0.07))),
+                          ],
+                        ),
+
+                        const SizedBox(height: 20),
+
+                        // ── SRM Portal WebView Button ──────────────────────
+                        GestureDetector(
+                          onTap: () {
+                            showModalBottomSheet(
+                              context: context,
+                              isScrollControlled: true,
+                              backgroundColor: Colors.transparent,
+                              builder: (_) => SizedBox(
+                                height: MediaQuery.of(context).size.height * 0.93,
+                                child: ClipRRect(
+                                  borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                                  child: SrmWebViewLoginScreen(
+                                    onLoginSuccess: (cookies) {
+                                      Navigator.pop(context);
+                                      Navigator.pushReplacement(
+                                        context,
+                                        MaterialPageRoute(builder: (_) => const MainScaffold()),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                          child: Container(
+                            width: double.infinity,
+                            height: 58,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.04),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: const Color(0xFF6C63FF).withValues(alpha: 0.35),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.open_in_browser_rounded, color: const Color(0xFF6C63FF), size: 20),
+                                const SizedBox(width: 10),
+                                const Text(
+                                  'SIGN IN WITH SRM PORTAL',
+                                  style: TextStyle(
+                                    color: Color(0xFF6C63FF),
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 2,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 30),
 
                         // ── Bottom disclaimer ─────────────────────────────
                         Center(

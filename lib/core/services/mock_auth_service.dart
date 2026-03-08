@@ -8,8 +8,8 @@ class MockAuthService implements AuthRepository {
     await Future.delayed(const Duration(milliseconds: 600));
     return const StudentModel(
       name: 'Harshanth',
-      registerNumber: 'RA2111003010XXX',
-      department: 'B.Tech Computer Science',
+      registerNumber: 'RA2511026020400',
+      department: 'B.Tech Computer Science (AIML)',
       semester: 2,
       section: 'D',
     );
